@@ -4,7 +4,7 @@ module Lita
       http.post "/ticket_notification", :ticket_notification
 
       def ticket_notification(request, response)
-        "i got notified!"
+        send_message "i got notified!"
       end
     end
 
