@@ -14,8 +14,8 @@ module Lita
 
       def ticket_notification(request, response)
         self.ticket_json ||= JSON.parse(request.body.read)
-        users.each do |user|
-          robot.send_message(user, message)
+        user_names.each do |user_name|
+          send_message_to_user(user_name, ticket_message)
         end
       end
 
@@ -29,20 +29,18 @@ module Lita
         response.reply_privately "You will no longer receive ticket update notifications."
       end
 
-      def user_names
-        redis.lrange("ticket_users", 0, -1)
-      end
-
-      def message
-        "Ticket: #{ticket.title}\nState:#{ticket.state}\nImportance:#{ticket.importance_name}\nTags:#{ticket.tag}\n#{ticket.url}"
-      end
-
     private
 
-      def users
-        user_names.map do |user_name|
-          Lita::Source.new({ user: Lita::User.find_by_name(user_name) })
-        end
+      def send_message_to_user(user_name, messaage)
+        robot.send_message(source_from_name(user_name), message)
+      end
+
+      def source_from_name(name)
+        Lita::Source.new({ user: Lita::User.find_by_name(name) })
+      end
+
+      def user_names
+        redis.lrange("ticket_users", 0, -1)
       end
 
       def ticket
@@ -82,6 +80,10 @@ module Lita
           version: h['version'],
           watchers_ids: h['watchers_ids']
         }
+      end
+
+      def ticket_message
+        "Ticket: #{ticket.title}\nState:#{ticket.state}\nImportance:#{ticket.importance_name}\nTags:#{ticket.tag}\n#{ticket.url}"
       end
     end
 
