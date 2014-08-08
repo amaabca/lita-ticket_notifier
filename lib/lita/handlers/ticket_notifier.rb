@@ -29,14 +29,20 @@ module Lita
         response.reply_privately "You will no longer receive ticket update notifications."
       end
 
+      def user_names
+        redis.lrange("ticket_users", 0, -1)
+      end
+
+      def message
+        "Ticket: #{ticket.title}\nState:#{ticket.state}\nImportance:#{ticket.importance_name}\nTags:#{ticket.tag}\n#{ticket.url}"
+      end
+
+    private
+
       def users
         user_names.map do |user_name|
           Lita::Source.new({ user: Lita::User.find_by_name(user_name) })
         end
-      end
-
-      def user_names
-        redis.lrange("ticket_users", 0, -1)
       end
 
       def ticket
@@ -76,10 +82,6 @@ module Lita
           version: h['version'],
           watchers_ids: h['watchers_ids']
         }
-      end
-
-      def message
-        "Ticket: #{ticket.title}\nState:#{ticket.state}\nImportance:#{ticket.importance_name}\nTags:#{ticket.tag}\n#{ticket.url}"
       end
     end
 
