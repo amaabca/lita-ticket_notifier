@@ -6,7 +6,7 @@ describe Lita::Handlers::TicketNotifier, lita_handler: true do
   let(:request) { OpenStruct.new({ body: OpenStruct.new({ read: payload }) }) }
   let(:teddy) { Lita::User.create(123, name: "Teddy Ruxbin") }
   let(:batman) { Lita::User.create(567, name: "The Batman") }
-  let(:ticket_messsage) { "Ticket: test ticket\nState:review\nImportance:Low\nTags:dev\nhttp://ama.lighthouseapp.com/projects/66073/tickets/4146" }
+  let(:ticket_messsage) { "Ticket: test ticket\nState:review\nImportance:Low\nTags:dev\nhttp://waffles.lighthouseapp.com/projects/1/tickets/200" }
 
   it { routes_command("ticket notify start").to(:add_ticket_notification) }
   it { routes_command("ticket notify stop").to(:remove_ticket_notification) }
