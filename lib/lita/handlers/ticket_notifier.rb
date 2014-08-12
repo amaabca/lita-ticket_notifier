@@ -31,7 +31,7 @@ module Lita
 
     private
 
-      def send_message_to_user(user_name, messaage)
+      def send_message_to_user(user_name, message)
         robot.send_message(source_from_name(user_name), message)
       end
 
