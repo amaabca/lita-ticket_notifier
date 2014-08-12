@@ -25,6 +25,26 @@ describe Lita::Handlers::TicketNotifier, lita_handler: true do
     subject.ticket_notification(request, nil)
   end
 
+  it "doesn't add you twice" do
+    send_command("ticket notify start")
+    send_command("ticket notify start")
+
+    expect(replies.count).to eq(2)
+    expect(replies.first).to eq("You will now get notified of ticket updates.")
+    expect(replies.last).to eq("You're already on the list.")
+
+    expect(subject).to receive(:send_message_to_user).once
+
+    subject.ticket_notification(request, nil)
+  end
+
+  it "lets you know you're already not getting notifications" do
+    send_command("ticket notify stop")
+
+    expect(replies.count).to eq(1)
+    expect(replies.first).to eq("You weren't on the list.")
+  end
+
   it "doesn't send notifications to nobody" do
     expect(subject).to_not receive(:send_message_to_user)
     subject.ticket_notification(request, nil)

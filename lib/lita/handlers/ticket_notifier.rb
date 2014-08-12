@@ -20,11 +20,15 @@ module Lita
       end
 
       def add_ticket_notification(response)
+        response.reply_privately "You're already on the list." and return if user_names.include? response.user.name
+
         redis.lpush("ticket_users", response.user.name)
         response.reply_privately "You will now get notified of ticket updates."
       end
 
       def remove_ticket_notification(response)
+        response.reply_privately "You weren't on the list." and return unless user_names.include? response.user.name
+
         redis.lrem("ticket_users", 0, response.user.name)
         response.reply_privately "You will no longer receive ticket update notifications."
       end
