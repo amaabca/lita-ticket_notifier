@@ -4,9 +4,16 @@ require "json"
 describe Lita::Handlers::TicketNotifier, lita_handler: true do
   let(:payload) { File.read(File.join('spec', 'fixtures', 'ticket.json')) }
   let(:request) { OpenStruct.new({ body: OpenStruct.new({ read: payload }) }) }
+  let(:unwatched_payload) { File.read(File.join('spec', 'fixtures', 'unwatched_ticket.json')) }
+  let(:unwatched_request) { OpenStruct.new({ body: OpenStruct.new({ read: unwatched_payload }) }) }
+
   let(:teddy) { Lita::User.create(123, name: "Teddy Ruxbin") }
   let(:batman) { Lita::User.create(567, name: "The Batman") }
-  let(:ticket_messsage) { "Ticket: test ticket\nState:review\nImportance:Low\nTags:dev\nhttp://waffles.lighthouseapp.com/projects/1/tickets/200" }
+  let(:ticket_messsage) { "Ticket: test ticket\nState:review\nImportance:Low\nTags:dev pies\nhttp://waffles.lighthouseapp.com/projects/1/tickets/200" }
+
+  before(:each) do
+    Lita.config.handlers.ticket_notifier.tags_watching = 'pies cakes'
+  end
 
   it { routes_command("ticket notify start").to(:add_ticket_notification) }
   it { routes_command("ticket notify stop").to(:remove_ticket_notification) }
@@ -23,6 +30,31 @@ describe Lita::Handlers::TicketNotifier, lita_handler: true do
     send_command("ticket notify stop", as: batman)
 
     subject.ticket_notification(request, nil)
+  end
+
+  it "sends notifications for chosen tags" do
+    expect(subject).to receive(:send_message_to_user).once
+
+    send_command("ticket notify start")
+
+    subject.ticket_notification(request, nil)
+  end
+
+  it "defaults to watching all tags" do
+    Lita.config.handlers.ticket_notifier.tags_watching = ''
+    expect(subject).to receive(:send_message_to_user).once
+
+    send_command("ticket notify start")
+
+    subject.ticket_notification(request, nil)
+  end
+
+  it "doesn't send notifications for unwatched tags" do
+    expect(subject).to_not receive(:send_message_to_user)
+
+    send_command("ticket notify start")
+
+    subject.ticket_notification(unwatched_request, nil)
   end
 
   it "doesn't add you twice" do

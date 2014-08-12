@@ -2,6 +2,11 @@ module Lita
   module Handlers
     class TicketNotifier < Handler
       attr_accessor :ticket_json, :ticket_object
+
+      def self.default_config(config)
+        config.tags_watching = ''
+      end
+
       http.post "/ticket_notification", :ticket_notification
 
       route(/ticket notify start/i, :add_ticket_notification, command: true,
@@ -15,7 +20,7 @@ module Lita
       def ticket_notification(request, response)
         self.ticket_json ||= JSON.parse(request.body.read)
         user_names.each do |user_name|
-          send_message_to_user(user_name, ticket_message)
+          send_message_to_user(user_name, ticket_message) if notify?
         end
       end
 
@@ -34,6 +39,22 @@ module Lita
       end
 
     private
+
+      def tags_watching
+        Lita.config.handlers.ticket_notifier.tags_watching
+      end
+
+      def watching_all_tags?
+        tags_watching.empty?
+      end
+
+      def watching_tag?
+        (ticket.tag.split & tags_watching.split).any?
+      end
+
+      def notify?
+        watching_all_tags? || watching_tag?
+      end
 
       def send_message_to_user(user_name, message)
         robot.send_message(source_from_name(user_name), message)
