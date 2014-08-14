@@ -3,13 +3,9 @@ module Lita
     class TicketNotifier < Handler
       attr_accessor :ticket_json, :ticket_object
 
-      def self.default_config(config)
-        config.tags_watching = ''
-      end
-
       http.post "/ticket_notification", :ticket_notification
 
-      route(/ticket notify start/i, :add_ticket_notification, command: true,
+      route(/ticket notify start(.*)/i, :add_ticket_notification, command: true,
         help: { "ticket notify start" => "Lita will notify you of Lighthouse tickets." }
       )
 
@@ -27,21 +23,27 @@ module Lita
       def add_ticket_notification(response)
         response.reply_privately "You're already on the list." and return if user_names.include? response.user.name
 
-        redis.lpush("ticket_users", response.user.name)
+        redis.lpush("ticket_notifier_users", response.user.name)
+        redis.set(key(response.user.mention_name), response.matches[0][0])
         response.reply_privately "You will now get notified of ticket updates."
       end
 
       def remove_ticket_notification(response)
         response.reply_privately "You weren't on the list." and return unless user_names.include? response.user.name
 
-        redis.lrem("ticket_users", 0, response.user.name)
+        redis.lrem("ticket_notifier_users", 0, response.user.name)
+        redis.del(key(response.user.mention_name))
         response.reply_privately "You will no longer receive ticket update notifications."
       end
 
     private
 
-      def tags_watching
-        Lita.config.handlers.ticket_notifier.tags_watching
+      def key(name)
+        "ticket_notifier__tags_#{name}"
+      end
+
+      def tags_watching(mention_name)
+        redis.get(key(mention_name))
       end
 
       def watching_all_tags?

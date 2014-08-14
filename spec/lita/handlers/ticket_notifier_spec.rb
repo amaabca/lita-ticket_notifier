@@ -4,16 +4,14 @@ require "json"
 describe Lita::Handlers::TicketNotifier, lita_handler: true do
   let(:payload) { File.read(File.join('spec', 'fixtures', 'ticket.json')) }
   let(:request) { OpenStruct.new({ body: OpenStruct.new({ read: payload }) }) }
+  let(:other_payload) { File.read(File.join('spec', 'fixtures', 'other_ticket.json')) }
+  let(:other_request) { OpenStruct.new({ body: OpenStruct.new({ read: other_payload }) }) }
   let(:unwatched_payload) { File.read(File.join('spec', 'fixtures', 'unwatched_ticket.json')) }
   let(:unwatched_request) { OpenStruct.new({ body: OpenStruct.new({ read: unwatched_payload }) }) }
 
   let(:teddy) { Lita::User.create(123, name: "Teddy Ruxbin") }
   let(:batman) { Lita::User.create(567, name: "The Batman") }
   let(:ticket_messsage) { "Ticket: test ticket\nState:review\nImportance:Low\nTags:dev pies\nhttp://waffles.lighthouseapp.com/projects/1/tickets/200" }
-
-  before(:each) do
-    Lita.config.handlers.ticket_notifier.tags_watching = 'pies cakes'
-  end
 
   it { routes_command("ticket notify start").to(:add_ticket_notification) }
   it { routes_command("ticket notify stop").to(:remove_ticket_notification) }
@@ -24,36 +22,31 @@ describe Lita::Handlers::TicketNotifier, lita_handler: true do
     expect(subject).to receive(:send_message_to_user).with(teddy.name, ticket_messsage)
     expect(subject).to_not receive(:send_message_to_user).with(batman.name, ticket_messsage)
 
-    send_command("ticket notify start")
-    send_command("ticket notify start", as: teddy)
-    send_command("ticket notify start", as: batman)
+    send_command("ticket notify start pies")
+    send_command("ticket notify start pies", as: teddy)
+    send_command("ticket notify start pies", as: batman)
     send_command("ticket notify stop", as: batman)
 
     subject.ticket_notification(request, nil)
   end
 
   it "sends notifications for chosen tags" do
-    expect(subject).to receive(:send_message_to_user).once
+    expect(subject).to receive(:send_message_to_user).twice
 
-    send_command("ticket notify start")
+    send_command("ticket notify start pies waffles")
 
     subject.ticket_notification(request, nil)
+    subject.ticket_notification(other_request, nil)
+    subject.ticket_notification(unwatched_request, nil)
   end
 
   it "defaults to watching all tags" do
-    Lita.config.handlers.ticket_notifier.tags_watching = ''
-    expect(subject).to receive(:send_message_to_user).once
+    expect(subject).to receive(:send_message_to_user).exactly(3).times
 
     send_command("ticket notify start")
 
     subject.ticket_notification(request, nil)
-  end
-
-  it "doesn't send notifications for unwatched tags" do
-    expect(subject).to_not receive(:send_message_to_user)
-
-    send_command("ticket notify start")
-
+    subject.ticket_notification(other_request, nil)
     subject.ticket_notification(unwatched_request, nil)
   end
 
